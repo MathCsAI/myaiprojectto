@@ -120,18 +120,19 @@ class GitHubHelper:
             self._ensure_client()
             user = self.gh.get_user()
             repo = user.get_repo(repo_name)
-            
-            # Enable Pages
-            repo.create_pages_site(
-                source={"branch": branch, "path": "/"}
+            # Use the GitHub REST API to set the pages source
+            # See: https://docs.github.com/en/rest/pages/pages?apiVersion=2022-11-28#update-information-about-a-github-pages-site
+            repo._requester.requestJson(
+                "PUT",
+                f"/repos/{self.username}/{repo_name}/pages",
+                input={
+                    "source": {"branch": branch, "path": "/"}
+                }
             )
-            
             pages_url = f"https://{self.username}.github.io/{repo_name}/"
-            
             return pages_url
-        
         except GithubException as e:
-            if e.status == 409:  # Pages already enabled
+            if hasattr(e, "status") and e.status == 409:  # Pages already enabled
                 return f"https://{self.username}.github.io/{repo_name}/"
             raise Exception(f"Failed to enable GitHub Pages: {str(e)}")
     
