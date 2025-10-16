@@ -10,15 +10,42 @@ from config.config import config
 
 
 class GitHubHelper:
-    """Helper class for GitHub operations."""
-    
+    """Helper class for GitHub operations.
+
+    This helper now lazily initializes the GitHub client so the app can start
+    even when GITHUB_TOKEN is not provided (e.g., on Hugging Face Spaces).
+    GitHub operations will raise a clear error if credentials are missing.
+    """
+
     def __init__(self):
-        self.gh = Github(config.GITHUB_TOKEN)
-        self.username = config.GITHUB_USERNAME
+        # Defer client creation to allow runtime without GH credentials
+        self.token = (getattr(config, "GITHUB_TOKEN", "") or os.getenv("GITHUB_TOKEN", "")).strip()
+        self.username = (getattr(config, "GITHUB_USERNAME", "") or os.getenv("GITHUB_USERNAME", "")).strip()
+        self.gh: Optional[Github] = None
+
+    @staticmethod
+    def _is_placeholder(value: str) -> bool:
+        v = (value or "").strip().lower()
+        return not v or v.startswith("your_") or v in {"username", "token"}
+
+    def _ensure_client(self):
+        """Ensure GitHub client exists and credentials are present."""
+        if self.gh is not None:
+            return
+        if self._is_placeholder(self.token):
+            raise RuntimeError(
+                "GitHub token is not configured. Set GITHUB_TOKEN as a secret/env to use GitHub features."
+            )
+        try:
+            self.gh = Github(self.token)
+        except AssertionError:
+            # PyGithub asserts non-empty token; convert to helpful error
+            raise RuntimeError("Invalid or empty GITHUB_TOKEN provided. Please configure a valid token.")
     
     def create_repo(self, repo_name: str, description: str = "") -> str:
         """Create a new GitHub repository."""
         try:
+            self._ensure_client()
             user = self.gh.get_user()
             repo = user.create_repo(
                 name=repo_name,
@@ -45,8 +72,11 @@ class GitHubHelper:
         temp_dir = tempfile.mkdtemp()
         
         try:
+            self._ensure_client()
+            if self._is_placeholder(self.username):
+                raise RuntimeError("GitHub username is not configured. Set GITHUB_USERNAME to use GitHub features.")
             # Clone the repository
-            repo_url = f"https://{config.GITHUB_TOKEN}@github.com/{self.username}/{repo_name}.git"
+            repo_url = f"https://{self.token}@github.com/{self.username}/{repo_name}.git"
             repo = GitRepo.init(temp_dir)
             
             # Create files
@@ -75,6 +105,7 @@ class GitHubHelper:
     def enable_github_pages(self, repo_name: str, branch: str = "main") -> str:
         """Enable GitHub Pages for a repository."""
         try:
+            self._ensure_client()
             user = self.gh.get_user()
             repo = user.get_repo(repo_name)
             
@@ -112,6 +143,7 @@ class GitHubHelper:
     def check_secrets_in_repo(self, repo_name: str) -> bool:
         """Check if repository contains secrets (basic check)."""
         try:
+            self._ensure_client()
             user = self.gh.get_user()
             repo = user.get_repo(repo_name)
             
@@ -149,6 +181,7 @@ class GitHubHelper:
     def get_file_content(self, repo_name: str, file_path: str, commit_sha: str = None) -> Optional[str]:
         """Get content of a file from repository."""
         try:
+            self._ensure_client()
             user = self.gh.get_user()
             repo = user.get_repo(repo_name)
             
@@ -164,5 +197,5 @@ class GitHubHelper:
             return None
 
 
-# Singleton instance
+# Singleton instance (no immediate GH API initialization)
 github_helper = GitHubHelper()
