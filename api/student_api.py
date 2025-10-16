@@ -49,7 +49,9 @@ async def root():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "healthy"}
+    gh_ok = github_helper.has_credentials()
+    status = {"status": "healthy", "github": github_helper.credentials_status()}
+    return status
 
 
 @app.post("/api/task", response_model=TaskResponse)
@@ -73,7 +75,17 @@ async def receive_task(task: TaskRequest):
         if expected_secret and task.secret != expected_secret:
             raise HTTPException(status_code=401, detail="Invalid secret")
         
-        # Step 2: Generate app using LLM
+        # Step 2: Ensure GitHub credentials are present before attempting GH operations
+        if not github_helper.has_credentials():
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "GitHub credentials are not configured",
+                    "hint": "Set GITHUB_TOKEN and GITHUB_USERNAME to enable deployment to GitHub",
+                },
+            )
+
+        # Step 3: Generate app using LLM
         print(f"Generating app for task: {task.task}")
         files = llm_client.generate_app(
             brief=task.brief,
@@ -81,7 +93,7 @@ async def receive_task(task: TaskRequest):
             attachments=[att.dict() for att in task.attachments]
         )
         
-        # Step 3: Create unique repository name
+        # Step 4: Create unique repository name
         repo_name = f"{task.task}-{task.round}"
         repo_name = repo_name.replace("_", "-").lower()
         
@@ -91,11 +103,11 @@ async def receive_task(task: TaskRequest):
             description=f"Task: {task.task} Round {task.round}"
         )
         
-        # Step 4: Push files to repository
+        # Step 5: Push files to repository
         print(f"Pushing files to repository")
         commit_sha = github_helper.push_files(repo_name, files)
         
-        # Step 5: Enable GitHub Pages
+        # Step 6: Enable GitHub Pages
         print(f"Enabling GitHub Pages")
         pages_url = github_helper.enable_github_pages(repo_name)
         
@@ -103,7 +115,7 @@ async def receive_task(task: TaskRequest):
         print(f"Waiting for GitHub Pages to be available")
         github_helper.wait_for_pages(pages_url, timeout=config.GITHUB_PAGES_TIMEOUT)
         
-        # Step 6: Send evaluation response
+        # Step 7: Send evaluation response
         evaluation_data = {
             "email": task.email,
             "task": task.task,

@@ -41,6 +41,18 @@ class GitHubHelper:
         except AssertionError:
             # PyGithub asserts non-empty token; convert to helpful error
             raise RuntimeError("Invalid or empty GITHUB_TOKEN provided. Please configure a valid token.")
+
+    def has_credentials(self) -> bool:
+        """Return True if both token and username appear configured."""
+        return not self._is_placeholder(self.token) and not self._is_placeholder(self.username)
+
+    def credentials_status(self) -> Dict[str, str]:
+        """Return a structured status of credential configuration without revealing secrets."""
+        return {
+            "username_configured": "yes" if not self._is_placeholder(self.username) else "no",
+            "token_configured": "yes" if not self._is_placeholder(self.token) else "no",
+            "username": self.username if self.username and not self._is_placeholder(self.username) else "",
+        }
     
     def create_repo(self, repo_name: str, description: str = "") -> str:
         """Create a new GitHub repository."""
