@@ -97,11 +97,25 @@ async def receive_task(task: TaskRequest):
         repo_name = f"{task.task}-{task.round}"
         repo_name = repo_name.replace("_", "-").lower()
         
-        print(f"Creating repository: {repo_name}")
-        repo_url = github_helper.create_repo(
-            repo_name=repo_name,
-            description=f"Task: {task.task} Round {task.round}"
-        )
+        # Create repository with collision handling (auto-suffix)
+        attempt = 0
+        while True:
+            try:
+                print(f"Creating repository: {repo_name}")
+                repo_url = github_helper.create_repo(
+                    repo_name=repo_name,
+                    description=f"Task: {task.task} Round {task.round}"
+                )
+                break
+            except Exception as ce:
+                msg = str(ce).lower()
+                if "already exists" in msg and attempt < 3:
+                    attempt += 1
+                    suffix = str(int(datetime.utcnow().timestamp()))
+                    repo_name = f"{repo_name}-{suffix}"
+                    print(f"Repository exists, retrying with name: {repo_name}")
+                    continue
+                raise
         
         # Step 5: Push files to repository
         print(f"Pushing files to repository")
