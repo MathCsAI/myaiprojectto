@@ -111,9 +111,10 @@ async def receive_task(task: TaskRequest):
         print(f"Enabling GitHub Pages")
         pages_url = github_helper.enable_github_pages(repo_name)
         
-        # Wait for Pages to be available
+        # Wait for Pages to be available and capture status
         print(f"Waiting for GitHub Pages to be available")
-        github_helper.wait_for_pages(pages_url, timeout=config.GITHUB_PAGES_TIMEOUT)
+        ready = github_helper.wait_for_pages(pages_url, timeout=config.GITHUB_PAGES_TIMEOUT)
+        pages_status = github_helper.get_pages_build_status(repo_name)
         
         # Step 7: Send evaluation response
         evaluation_data = {
@@ -134,7 +135,7 @@ async def receive_task(task: TaskRequest):
         
         return TaskResponse(
             status="success",
-            message=f"App deployed successfully. Repo: {repo_url}, Pages: {pages_url}"
+            message=f"App deployed successfully. Repo: {repo_url}, Pages: {pages_url} | PagesReady={ready} BuildStatus={pages_status.get('status')}"
         )
     
     except Exception as e:
