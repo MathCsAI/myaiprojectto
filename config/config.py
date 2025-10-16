@@ -14,9 +14,10 @@ class Config:
     API_PORT = int(os.getenv("API_PORT", "7860"))
     
     # Database
+    # Default to SQLite for portability (e.g., Hugging Face Spaces)
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
-        "postgresql://user:password@localhost:5432/llm_deployment"
+        "sqlite:///./data/app.db"
     )
     
     # GitHub Settings
