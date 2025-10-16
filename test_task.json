@@ -1,8 +1,8 @@
 {
   "email": "test@example.com",
   "secret": "test123",
-  "task": "sum-of-sales-abc12",
-  "round": 1,
+  "task": "sum-of-sales-abc12-NEW",
+  "round": 2,
   "nonce": "test-nonce-12345",
   "brief": "Publish a single-page site that fetches data.csv from attachments, sums its sales column, sets the title to 'Sales Summary test', displays the total inside #total-sales, and loads Bootstrap 5 from jsdelivr.",
   "checks": [
@@ -12,7 +12,7 @@
     "js: !!document.querySelector(\"link[href*='bootstrap']\")",
     "js: !!document.querySelector(\"#total-sales\")"
   ],
-  "evaluation_url": "http://localhost:7860/evaluation/api/evaluate",
+  "evaluation_url": "https://mathcsai-llm-code-deployment.hf.space/evaluation/api/evaluate",
   "attachments": [
     {
       "name": "data.csv",
