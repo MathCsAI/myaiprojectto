@@ -121,18 +121,37 @@ class GitHubHelper:
             self._ensure_client()
             user = self.gh.get_user()
             repo = user.get_repo(repo_name)
-            # Use the GitHub REST API to set the pages source
-            # See: https://docs.github.com/en/rest/pages/pages?apiVersion=2022-11-28#update-information-about-a-github-pages-site
-            repo._requester.requestJson(
-                "PUT",
-                f"/repos/{self.username}/{repo_name}/pages",
-                input={
-                    "source": {"branch": branch, "path": "/"}
-                }
-            )
+            # Use the GitHub REST API to create/update pages
+            # Try POST first (create), then PUT (update) if it already exists
             pages_url = f"https://{self.username}.github.io/{repo_name}/"
+            
+            try:
+                # Try creating Pages (POST)
+                repo._requester.requestJson(
+                    "POST",
+                    f"/repos/{self.username}/{repo_name}/pages",
+                    input={
+                        "source": {"branch": branch, "path": "/"}
+                    }
+                )
+                print(f"GitHub Pages created for {repo_name}")
+            except GithubException as create_error:
+                if hasattr(create_error, "status") and create_error.status == 409:
+                    # Pages already exists, try updating with PUT
+                    print(f"GitHub Pages already exists for {repo_name}, updating...")
+                    repo._requester.requestJson(
+                        "PUT",
+                        f"/repos/{self.username}/{repo_name}/pages",
+                        input={
+                            "source": {"branch": branch, "path": "/"}
+                        }
+                    )
+                else:
+                    raise
+            
             return pages_url
         except GithubException as e:
+            print(f"GitHub Pages API error: {e.status if hasattr(e, 'status') else 'unknown'} - {str(e)}")
             if hasattr(e, "status") and e.status == 409:  # Pages already enabled
                 return f"https://{self.username}.github.io/{repo_name}/"
             raise Exception(f"Failed to enable GitHub Pages: {str(e)}")
@@ -257,6 +276,36 @@ class GitHubHelper:
         except Exception as e:
             print(f"Error getting file content: {str(e)}")
             return None
+
+    def get_pages_build_status(self, repo_name: str) -> Dict[str, Optional[str]]:
+        """Get latest GitHub Pages build status for a repository.
+
+        Returns a dict with keys: status, created_at, updated_at, url, error
+        """
+        import requests
+        try:
+            self._ensure_client()
+            headers = {
+                "Authorization": f"token {self.token}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "llm-code-deployment-bot"
+            }
+            build_url = f"https://api.github.com/repos/{self.username}/{repo_name}/pages/builds/latest"
+            resp = requests.get(build_url, headers=headers, timeout=10)
+            if resp.status_code == 404:
+                return {"status": "not_found", "created_at": None, "updated_at": None, "url": None, "error": None}
+            if not resp.ok:
+                return {"status": "unknown", "created_at": None, "updated_at": None, "url": None, "error": f"HTTP {resp.status_code}"}
+            data = resp.json() or {}
+            return {
+                "status": str((data.get("status") or data.get("build") or "")).lower(),
+                "created_at": data.get("created_at"),
+                "updated_at": data.get("updated_at"),
+                "url": data.get("url"),
+                "error": (data.get("error") or {}).get("message") if isinstance(data.get("error"), dict) else None
+            }
+        except Exception as e:
+            return {"status": "error", "created_at": None, "updated_at": None, "url": None, "error": str(e)}
 
 
 # Singleton instance (no immediate GH API initialization)
