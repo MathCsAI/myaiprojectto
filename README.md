@@ -1,3 +1,15 @@
+---
+title: LLM Code Deployment System
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: gradio
+sdk_version: 4.16.0
+app_file: app.py
+pinned: false
+license: mit
+---
+
 # 🚀 LLM Code Deployment System
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
