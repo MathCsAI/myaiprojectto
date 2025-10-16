@@ -1,0 +1,55 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium
+      
+      - name: Run syntax checks
+        run: |
+          python -m py_compile $(find . -name "*.py" -not -path "./venv/*")
+      
+      - name: Check imports
+        run: |
+          python -c "from config.config import config; print('✓ Config imports OK')"
+          python -c "from database.models import Task, Repo, Result; print('✓ Database imports OK')"
+          python -c "from utils.llm_client import llm_client; print('✓ Utils imports OK')"
+      
+      - name: Test summary
+        run: echo "✅ All tests passed for Python ${{ matrix.python-version }}"

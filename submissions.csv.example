@@ -1,0 +1,4 @@
+timestamp,email,endpoint,secret
+2024-01-15T10:00:00Z,student1@example.com,https://student1.example.com/api/task,secret123
+2024-01-15T10:05:00Z,student2@example.com,https://student2.example.com/api/task,secret456
+2024-01-15T10:10:00Z,student3@example.com,https://student3.example.com/api/task,secret789

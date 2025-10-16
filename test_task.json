@@ -1,0 +1,22 @@
+{
+  "email": "test@example.com",
+  "secret": "test123",
+  "task": "sum-of-sales-abc12",
+  "round": 1,
+  "nonce": "test-nonce-12345",
+  "brief": "Publish a single-page site that fetches data.csv from attachments, sums its sales column, sets the title to 'Sales Summary test', displays the total inside #total-sales, and loads Bootstrap 5 from jsdelivr.",
+  "checks": [
+    "Repo has MIT license",
+    "README.md is professional",
+    "js: document.title.includes('Sales Summary')",
+    "js: !!document.querySelector(\"link[href*='bootstrap']\")",
+    "js: !!document.querySelector(\"#total-sales\")"
+  ],
+  "evaluation_url": "http://localhost:7860/evaluation/api/evaluate",
+  "attachments": [
+    {
+      "name": "data.csv",
+      "url": "data:text/csv;base64,cHJvZHVjdCxyZWdpb24sc2FsZXMKV2lkZ2V0LE5vcnRoLDUwMApHYWRnZXQsU291dGgsNzUwClRvb2wsRWFzdCw2MDAKRGV2aWNlLFdlc3QsODUw"
+    }
+  ]
+}
