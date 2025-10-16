@@ -1,5 +1,6 @@
 """GitHub API helper functions."""
 import time
+from urllib.parse import urlparse
 from typing import Dict, Optional
 from github import Github, GithubException
 from git import Repo as GitRepo
@@ -137,10 +138,59 @@ class GitHubHelper:
             raise Exception(f"Failed to enable GitHub Pages: {str(e)}")
     
     def wait_for_pages(self, pages_url: str, timeout: int = 300) -> bool:
-        """Wait for GitHub Pages to be available."""
+        """Wait for GitHub Pages to be available.
+
+        Strategy:
+        1) Infer repo name from pages_url and trigger a Pages build via REST API (if needed)
+        2) Poll the latest Pages build status until built/succeeded
+        3) Then poll the public pages_url until it returns HTTP 200
+        """
         import requests
         start_time = time.time()
-        
+
+        # Infer repo name from pages_url: https://<user>.github.io/<repo_name>/
+        repo_name = None
+        try:
+            path = urlparse(pages_url).path  # e.g., '/repo_name/'
+            parts = [p for p in path.split('/') if p]
+            if parts:
+                repo_name = parts[0]
+        except Exception:
+            repo_name = None
+
+        headers = {
+            "Authorization": f"token {self.token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "llm-code-deployment-bot"
+        }
+
+        # Step 1 & 2: Trigger and/or poll the Pages build status
+        if repo_name:
+            build_url = f"https://api.github.com/repos/{self.username}/{repo_name}/pages/builds/latest"
+            trigger_url = f"https://api.github.com/repos/{self.username}/{repo_name}/pages/builds"
+            last_status = None
+            while time.time() - start_time < timeout:
+                try:
+                    resp = requests.get(build_url, headers=headers, timeout=10)
+                    if resp.status_code == 404:
+                        # No build yet; trigger one
+                        requests.post(trigger_url, headers=headers, timeout=10)
+                        last_status = "triggered"
+                    elif resp.ok:
+                        data = resp.json() or {}
+                        status = (data.get("status") or data.get("build") or "").lower()
+                        last_status = status
+                        if status in {"built", "succeeded", "success"}:
+                            break
+                        # If it's building/queued, continue polling
+                    else:
+                        # Non-OK; wait and retry
+                        pass
+                except Exception:
+                    pass
+                time.sleep(5)
+
+        # Step 3: Poll the public URL until it returns 200
         while time.time() - start_time < timeout:
             try:
                 response = requests.get(pages_url, timeout=10)
@@ -148,9 +198,8 @@ class GitHubHelper:
                     return True
             except Exception:
                 pass
-            
-            time.sleep(10)
-        
+            time.sleep(5)
+
         return False
     
     def check_secrets_in_repo(self, repo_name: str) -> bool:
