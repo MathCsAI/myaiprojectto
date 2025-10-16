@@ -27,29 +27,7 @@ This directory contains automated CI/CD workflows for the LLM Code Deployment Sy
   - `HF_USERNAME` - HuggingFace username
   - `HF_SPACE_NAME` - Space name (e.g., llm-deployment)
 
-#### `deploy-railway.yml` - Railway
-- **Trigger**: Push to main, Manual
-- **Purpose**: Deploy to Railway
-- **Secrets Required**:
-  - `RAILWAY_TOKEN` - Railway API token
-  - `RAILWAY_SERVICE_NAME` - Service name
-
-#### `deploy-render.yml` - Render
-- **Trigger**: Push to main, Manual
-- **Purpose**: Deploy to Render
-- **Secrets Required**:
-  - `RENDER_DEPLOY_HOOK` - Render deploy hook URL
-
-#### `deploy-docker.yml` - Docker Hub
-- **Trigger**: Push to main, Tags, Manual
-- **Purpose**: Build and push Docker images
-- **Secrets Required**:
-  - `DOCKER_USERNAME` - Docker Hub username
-  - `DOCKER_PASSWORD` - Docker Hub password/token
-- **Features**:
-  - Multi-tag support (latest, version tags)
-  - Cache optimization
-  - Automatic versioning
+> Note: Optional workflows for Railway, Render, and Docker were removed to keep the CI/CD minimal and focused on HuggingFace. You can reintroduce them later if needed.
 
 ## 🔧 Setup Instructions
 
@@ -57,9 +35,9 @@ This directory contains automated CI/CD workflows for the LLM Code Deployment Sy
 
 Go to your repository → Settings → Secrets and variables → Actions
 
-Add the following secrets based on your deployment target:
+Add the following secrets:
 
-#### For HuggingFace Spaces:
+#### HuggingFace Spaces (required):
 ```
 HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxx
 HF_USERNAME=your_username
@@ -68,28 +46,7 @@ HF_SPACE_NAME=llm-deployment
 
 Get HF_TOKEN from: https://huggingface.co/settings/tokens
 
-#### For Railway:
-```
-RAILWAY_TOKEN=xxxxxxxxxxxxxxxxxxxxx
-RAILWAY_SERVICE_NAME=llm-deployment
-```
-
-Get RAILWAY_TOKEN from: https://railway.app/account/tokens
-
-#### For Render:
-```
-RENDER_DEPLOY_HOOK=https://api.render.com/deploy/srv-xxxxx?key=xxxxx
-```
-
-Get deploy hook from: Render Dashboard → Service → Settings → Deploy Hook
-
-#### For Docker Hub:
-```
-DOCKER_USERNAME=your_dockerhub_username
-DOCKER_PASSWORD=your_dockerhub_token
-```
-
-Create token at: https://hub.docker.com/settings/security
+> All other platform secrets are no longer needed.
 
 ### 2. Enable Workflows
 
@@ -139,11 +96,8 @@ All workflows support `workflow_dispatch` for manual execution:
          │
          ▼
 ┌──────────────────────────────┐
-│  Deploy (Parallel)           │
-│  • HuggingFace Spaces       │
-│  • Railway (if configured)   │
-│  • Render (if configured)    │
-│  • Docker Hub               │
+│  Deploy                      │
+│  • HuggingFace Spaces        │
 └──────────────────────────────┘
 ```
 
@@ -193,7 +147,7 @@ Add status badges to your README:
 ```markdown
 ![Tests](https://github.com/USERNAME/REPO/workflows/Run%20Tests/badge.svg)
 ![Deploy](https://github.com/USERNAME/REPO/workflows/Deploy%20to%20HuggingFace%20Spaces/badge.svg)
-![Docker](https://github.com/USERNAME/REPO/workflows/Build%20and%20Push%20Docker%20Image/badge.svg)
+<!-- Docker badge removed since Docker workflow is not present -->
 ```
 
 ## 🔒 Security Best Practices
