@@ -114,7 +114,11 @@ async def receive_task(task: TaskRequest):
         # Wait for Pages to be available and capture status
         print(f"Waiting for GitHub Pages to be available")
         ready = github_helper.wait_for_pages(pages_url, timeout=config.GITHUB_PAGES_TIMEOUT)
-        pages_status = github_helper.get_pages_build_status(repo_name)
+        # Backward-compatible: handle older runtimes without get_pages_build_status
+        try:
+            pages_status = github_helper.get_pages_build_status(repo_name)  # type: ignore[attr-defined]
+        except Exception:
+            pages_status = {"status": "unknown"}
         
         # Step 7: Send evaluation response
         evaluation_data = {
