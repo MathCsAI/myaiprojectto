@@ -148,6 +148,17 @@ CRITICAL Requirements:
         for i, check in enumerate(checks, 1):
             checks_info += f"{i}. {check}\n"
         
+        # Add implicit requirements based on common patterns
+        implicit_requirements = "\n\nIMPLICIT REQUIREMENTS (based on standard patterns):\n"
+        if "github" in brief.lower():
+            implicit_requirements += "- For GitHub-related tasks: Always include #github-created-at to display the account creation date\n"
+            implicit_requirements += "- Preserve ALL form elements and data display areas from previous rounds\n"
+        if "markdown" in brief.lower():
+            implicit_requirements += "- For Markdown tasks: Always preserve #markdown-output for rendered content\n"
+            implicit_requirements += "- If adding tabs/views, keep all original display elements visible\n"
+        
+        checks_info += implicit_requirements
+        
         prompt = f"""Create a single-page web application with the following requirements:
 
 BRIEF:
@@ -162,6 +173,10 @@ CRITICAL IMPLEMENTATION RULES:
 4. If checks mention "fetch(" or API calls: MUST implement actual working fetch() requests
 5. ALL checks MUST be satisfied - review each one carefully before generating code
 6. For data URIs: Parse the base64 content and use it directly in JavaScript
+7. CRITICAL: If the brief mentions updates/improvements to an existing feature, you MUST preserve ALL original functionality
+   - Round 2 builds ON TOP of Round 1, never removes or replaces original elements
+   - Keep ALL IDs, classes, and elements from the original requirements
+   - Add new features alongside existing ones, never remove them
 
 Example for CSV data URI:
 const dataUri = "data:text/csv;base64,....";
