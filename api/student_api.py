@@ -67,10 +67,16 @@ async def receive_task(task: TaskRequest):
     5. Enables GitHub Pages
     6. Sends evaluation response
     """
+    # --- SECURE GLOBAL SECRET CHECK ---
+    if task.secret != config.SECRET_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid secret"
+        )
+    # --- END SECURE GLOBAL SECRET CHECK ---
+
     try:
-        # Step 1: Validate secret
-        # In production, load secrets from database
-        # For now, we'll accept any secret (you should implement proper validation)
+        # Step 1: Validate secret (per-email, optional)
         expected_secret = config.STUDENT_SECRETS.get(task.email)
         if expected_secret and task.secret != expected_secret:
             raise HTTPException(status_code=401, detail="Invalid secret")
