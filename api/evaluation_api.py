@@ -25,6 +25,19 @@ class SubmissionResponse(BaseModel):
     message: str
 
 
+class TaskRegistration(BaseModel):
+    email: EmailStr
+    task: str
+    round: int
+    nonce: str
+    brief: str
+    checks: list
+    evaluation_url: HttpUrl
+    endpoint: HttpUrl
+    secret: str
+    attachments: list = []
+
+
 @app.on_event("startup")
 async def startup():
     """Initialize database on startup."""
@@ -49,16 +62,7 @@ async def health():
 
 @app.post("/api/register_task")
 async def register_task(
-    email: str,
-    task: str,
-    round: int,
-    nonce: str,
-    brief: str,
-    checks: list,
-    evaluation_url: str,
-    endpoint: str,
-    secret: str,
-    attachments: list = None,
+    registration: TaskRegistration,
     db: Session = Depends(get_db_session)
 ):
     """
@@ -68,10 +72,10 @@ async def register_task(
     try:
         # Check if task already exists
         existing = db.query(Task).filter(
-            Task.email == email,
-            Task.task == task,
-            Task.round == round,
-            Task.nonce == nonce
+            Task.email == registration.email,
+            Task.task == registration.task,
+            Task.round == registration.round,
+            Task.nonce == registration.nonce
         ).first()
         
         if existing:
@@ -80,17 +84,17 @@ async def register_task(
         # Create new task
         new_task = Task(
             timestamp=datetime.utcnow(),
-            email=email,
-            task=task,
-            round=round,
-            nonce=nonce,
-            brief=brief,
-            attachments=attachments or [],
-            checks=checks,
-            evaluation_url=evaluation_url,
-            endpoint=endpoint,
+            email=registration.email,
+            task=registration.task,
+            round=registration.round,
+            nonce=registration.nonce,
+            brief=registration.brief,
+            attachments=registration.attachments,
+            checks=registration.checks,
+            evaluation_url=str(registration.evaluation_url),
+            endpoint=str(registration.endpoint),
             statuscode=None,
-            secret=secret
+            secret=registration.secret
         )
         db.add(new_task)
         db.commit()
