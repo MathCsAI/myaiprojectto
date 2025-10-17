@@ -44,13 +44,47 @@ class LLMClient:
                 if system_prompt:
                     full_prompt = f"{system_prompt}\n\n{prompt}"
                 
+                # Configure safety settings to be more permissive for code generation
+                import google.generativeai as genai
+                safety_settings = [
+                    {
+                        "category": "HARM_CATEGORY_HARASSMENT",
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_HATE_SPEECH",
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        "threshold": "BLOCK_NONE"
+                    },
+                ]
+                
                 response = self.client.generate_content(
                     full_prompt,
                     generation_config={
                         "temperature": 0.7,
                         "max_output_tokens": 8192,  # Gemini free tier supports up to 8192
-                    }
+                    },
+                    safety_settings=safety_settings
                 )
+                
+                # Handle safety blocks with retry
+                if not response.text:
+                    if hasattr(response, 'prompt_feedback'):
+                        raise Exception(f"Content blocked by safety filters: {response.prompt_feedback}")
+                    # Try to get partial results
+                    if response.candidates and len(response.candidates) > 0:
+                        candidate = response.candidates[0]
+                        if hasattr(candidate, 'content') and candidate.content.parts:
+                            return candidate.content.parts[0].text
+                    raise Exception("No valid response from Gemini API")
+                
                 return response.text
             
             elif self.provider in ["aipipe", "openai"]:
