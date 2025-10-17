@@ -47,6 +47,60 @@ async def health():
     return {"status": "healthy"}
 
 
+@app.post("/api/register_task")
+async def register_task(
+    email: str,
+    task: str,
+    round: int,
+    nonce: str,
+    brief: str,
+    checks: list,
+    evaluation_url: str,
+    endpoint: str,
+    secret: str,
+    attachments: list = None,
+    db: Session = Depends(get_db_session)
+):
+    """
+    Register a task in the database (for testing purposes).
+    In production, tasks are registered via round1.py/round2.py scripts.
+    """
+    try:
+        # Check if task already exists
+        existing = db.query(Task).filter(
+            Task.email == email,
+            Task.task == task,
+            Task.round == round,
+            Task.nonce == nonce
+        ).first()
+        
+        if existing:
+            return {"status": "exists", "message": "Task already registered"}
+        
+        # Create new task
+        new_task = Task(
+            timestamp=datetime.utcnow(),
+            email=email,
+            task=task,
+            round=round,
+            nonce=nonce,
+            brief=brief,
+            attachments=attachments or [],
+            checks=checks,
+            evaluation_url=evaluation_url,
+            endpoint=endpoint,
+            statuscode=None,
+            secret=secret
+        )
+        db.add(new_task)
+        db.commit()
+        
+        return {"status": "success", "message": "Task registered successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to register task: {str(e)}")
+
+
 @app.post("/api/evaluate", response_model=SubmissionResponse)
 async def submit_repo(
     submission: RepoSubmission,
