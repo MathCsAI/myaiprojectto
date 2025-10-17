@@ -10,7 +10,8 @@ def retry_request(
     method: str = "POST",
     json_data: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, str]] = None,
-    max_retries: int = None
+    max_retries: int = None,
+    timeout: int = 30
 ) -> requests.Response:
     """
     Retry HTTP request with exponential backoff.
@@ -21,6 +22,7 @@ def retry_request(
         json_data: JSON data to send
         headers: HTTP headers
         max_retries: Maximum number of retries (uses config if None)
+        timeout: Request timeout in seconds (default 30)
     
     Returns:
         Response object
@@ -39,9 +41,9 @@ def retry_request(
     for attempt in range(max_retries + 1):
         try:
             if method.upper() == "POST":
-                response = requests.post(url, json=json_data, headers=headers, timeout=30)
+                response = requests.post(url, json=json_data, headers=headers, timeout=timeout)
             elif method.upper() == "GET":
-                response = requests.get(url, headers=headers, timeout=30)
+                response = requests.get(url, headers=headers, timeout=timeout)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
             
@@ -83,8 +85,16 @@ def send_evaluation_response(
         True if successful, False otherwise
     """
     try:
-        response = retry_request(evaluation_url, method="POST", json_data=data)
+        # Use longer timeout for evaluation callbacks (they might be slow)
+        response = retry_request(
+            evaluation_url, 
+            method="POST", 
+            json_data=data,
+            timeout=90  # Increased from 30 to 90 seconds
+        )
         return response.status_code == 200
     except Exception as e:
         print(f"Failed to send evaluation response: {e}")
+        print("Warning: Failed to send evaluation response")
+        # Don't fail the entire task if evaluation callback fails
         return False
