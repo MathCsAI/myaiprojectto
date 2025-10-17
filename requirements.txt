@@ -20,6 +20,7 @@ httpx
 tenacity
 openai
 anthropic
+google-generativeai
 beautifulsoup4
 lxml
 gradio

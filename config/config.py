@@ -26,9 +26,9 @@ class Config:
     
     # LLM Settings
     LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-    LLM_API_PROVIDER = os.getenv("LLM_API_PROVIDER", "aipipe")  # aipipe, openai, anthropic, etc.
-    LLM_API_BASE_URL = os.getenv("LLM_API_BASE_URL", "https://api.aipipe.com/v1")
-    LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4-turbo-preview")
+    LLM_API_PROVIDER = os.getenv("LLM_API_PROVIDER", "gemini")  # gemini, aipipe, openai, anthropic
+    LLM_API_BASE_URL = os.getenv("LLM_API_BASE_URL", "https://generativelanguage.googleapis.com")
+    LLM_MODEL = os.getenv("LLM_MODEL", "gemini-1.5-flash")  # gemini-1.5-flash (free tier) or gemini-1.5-pro
     
     # Security
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")

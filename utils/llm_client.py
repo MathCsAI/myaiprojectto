@@ -12,7 +12,12 @@ class LLMClient:
         self.api_key = config.LLM_API_KEY
         self.model = config.LLM_MODEL
         
-        if self.provider == "aipipe":
+        if self.provider == "gemini":
+            # Google Gemini API
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            self.client = genai.GenerativeModel(self.model)
+        elif self.provider == "aipipe":
             # AIPipe uses OpenAI-compatible API
             from openai import OpenAI
             self.client = OpenAI(
@@ -31,7 +36,23 @@ class LLMClient:
     def generate_code(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         """Generate code using LLM."""
         try:
-            if self.provider in ["aipipe", "openai"]:
+            if self.provider == "gemini":
+                # Google Gemini API
+                # Combine system prompt and user prompt for Gemini
+                full_prompt = prompt
+                if system_prompt:
+                    full_prompt = f"{system_prompt}\n\n{prompt}"
+                
+                response = self.client.generate_content(
+                    full_prompt,
+                    generation_config={
+                        "temperature": 0.7,
+                        "max_output_tokens": 8192,  # Gemini free tier supports up to 8192
+                    }
+                )
+                return response.text
+            
+            elif self.provider in ["aipipe", "openai"]:
                 # AIPipe and OpenAI use the same API format
                 messages = []
                 if system_prompt:
