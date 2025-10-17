@@ -73,13 +73,15 @@ Requirements:
 - Follow best practices
 - Ensure all checks will pass
 - Add proper error handling
-- Write clean, commented code"""
+- Write clean, commented code
+- When attachments are provided as data URIs, embed them directly in the JavaScript code"""
         
         attachments_info = ""
         if attachments:
-            attachments_info = "\n\nAttachments provided:\n"
+            attachments_info = "\n\nAttachments provided (embed these directly in your code):\n"
             for att in attachments:
-                attachments_info += f"- {att['name']}: {att['url'][:100]}...\n"
+                # Provide the full data URI for the LLM to use
+                attachments_info += f"\n{att['name']}:\n{att['url']}\n"
         
         checks_info = "\n\nThe app must pass these checks:\n"
         for i, check in enumerate(checks, 1):
@@ -91,6 +93,14 @@ BRIEF:
 {brief}
 {attachments_info}
 {checks_info}
+
+IMPORTANT: For any data files provided as data URIs above, embed them directly in your JavaScript code.
+Do NOT try to fetch external files. Parse the base64 data URI and use it inline.
+
+Example for CSV data URI:
+const dataUri = "data:text/csv;base64,....";
+const csvText = atob(dataUri.split(',')[1]);
+// then parse csvText
 
 Generate THREE files:
 1. index.html (complete HTML file with embedded CSS and JavaScript)
