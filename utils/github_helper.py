@@ -112,9 +112,26 @@ class GitHubHelper:
             repo.index.add(list(files.keys()))
             commit = repo.index.commit("Initial commit")
             
-            # Add remote and push to main
+            # Add remote and push to main with retry logic for network issues
             origin = repo.create_remote("origin", repo_url)
-            origin.push(refspec="master:main")
+            
+            # Retry git push up to 3 times for DNS/network failures
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    origin.push(refspec="master:main")
+                    break  # Success, exit retry loop
+                except Exception as push_error:
+                    error_msg = str(push_error)
+                    if "Could not resolve host" in error_msg or "unable to access" in error_msg:
+                        if attempt < max_retries - 1:
+                            wait_time = 2 ** attempt  # 1s, 2s, 4s
+                            print(f"Git push failed (DNS/network issue), retrying in {wait_time}s... (attempt {attempt+1}/{max_retries})")
+                            import time
+                            time.sleep(wait_time)
+                            continue
+                    # Not a retryable error or max retries reached
+                    raise
             
             # Also push to gh-pages if requested
             if also_gh_pages:
@@ -122,8 +139,23 @@ class GitHubHelper:
                 try:
                     # Create gh-pages branch from current state
                     repo.git.checkout('-b', 'gh-pages')
-                    origin.push(refspec="gh-pages:gh-pages", force=True)
-                    print(f"Successfully pushed to gh-pages branch")
+                    
+                    # Retry gh-pages push with same logic
+                    for attempt in range(max_retries):
+                        try:
+                            origin.push(refspec="gh-pages:gh-pages", force=True)
+                            print(f"Successfully pushed to gh-pages branch")
+                            break
+                        except Exception as gh_push_error:
+                            error_msg = str(gh_push_error)
+                            if "Could not resolve host" in error_msg or "unable to access" in error_msg:
+                                if attempt < max_retries - 1:
+                                    wait_time = 2 ** attempt
+                                    print(f"gh-pages push failed (DNS/network issue), retrying in {wait_time}s... (attempt {attempt+1}/{max_retries})")
+                                    import time
+                                    time.sleep(wait_time)
+                                    continue
+                            raise
                 except Exception as gh_error:
                     print(f"Warning: Failed to push gh-pages branch: {gh_error}")
             
