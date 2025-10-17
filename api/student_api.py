@@ -145,11 +145,19 @@ async def receive_task(task: TaskRequest):
             "pages_url": pages_url,
         }
         
-        print(f"Sending evaluation response to {task.evaluation_url}")
-        success = send_evaluation_response(task.evaluation_url, evaluation_data)
+        # Send evaluation response asynchronously (non-blocking)
+        # This prevents circular dependency timeout when HF Space calls its own evaluation endpoint
+        import threading
+        def send_async():
+            try:
+                print(f"Sending evaluation response to {task.evaluation_url}")
+                success = send_evaluation_response(task.evaluation_url, evaluation_data)
+                if not success:
+                    print(f"Warning: Failed to send evaluation response")
+            except Exception as e:
+                print(f"Warning: Evaluation callback failed: {e}")
         
-        if not success:
-            print(f"Warning: Failed to send evaluation response")
+        threading.Thread(target=send_async, daemon=True).start()
         
         return TaskResponse(
             status="success",
