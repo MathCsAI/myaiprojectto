@@ -4,11 +4,18 @@ Quick test script to verify Gemini integration.
 """
 import os
 import sys
+from dotenv import load_dotenv
 
-# Set environment for testing (replace with your actual key)
+# Load .env file first
+load_dotenv()
+
+# Set environment for testing
 print("=" * 60)
 print("GEMINI INTEGRATION TEST")
 print("=" * 60)
+
+# Set SQLite database
+os.environ['DATABASE_URL'] = 'sqlite:///./data/app.db'
 
 # Check if API key is set
 api_key = os.getenv("LLM_API_KEY", "")
@@ -22,11 +29,8 @@ if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
     sys.exit(1)
 
 print(f"\n✓ API Key found (starts with: {api_key[:10]}...)")
-
-# Force reload to use new .env
-os.environ['DATABASE_URL'] = 'sqlite:///./data/app.db'
-os.environ['LLM_API_PROVIDER'] = 'gemini'
-os.environ['LLM_MODEL'] = 'gemini-1.5-flash'
+print(f"  Provider: {os.getenv('LLM_API_PROVIDER', 'not set')}")
+print(f"  Model: {os.getenv('LLM_MODEL', 'not set')}")
 
 try:
     from utils.llm_client import llm_client

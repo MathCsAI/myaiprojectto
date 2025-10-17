@@ -13,9 +13,10 @@ class LLMClient:
         self.model = config.LLM_MODEL
         
         if self.provider == "gemini":
-            # Google Gemini API
             import google.generativeai as genai
             genai.configure(api_key=self.api_key)
+            
+            # Create the Gemini client
             self.client = genai.GenerativeModel(self.model)
         elif self.provider == "aipipe":
             # AIPipe uses OpenAI-compatible API
