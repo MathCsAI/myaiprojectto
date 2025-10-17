@@ -117,11 +117,11 @@ async def receive_task(task: TaskRequest):
                     continue
                 raise
         
-        # Step 5: Push files to repository
+        # Step 5: Push files to repository (including gh-pages branch for auto Pages deployment)
         print(f"Pushing files to repository")
-        commit_sha = github_helper.push_files(repo_name, files)
+        commit_sha = github_helper.push_files(repo_name, files, also_gh_pages=True)
         
-        # Step 6: Enable GitHub Pages
+        # Step 6: Enable GitHub Pages (tries API, but gh-pages branch may auto-enable)
         print(f"Enabling GitHub Pages")
         pages_url = github_helper.enable_github_pages(repo_name)
         

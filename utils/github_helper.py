@@ -80,8 +80,17 @@ class GitHubHelper:
                     raise Exception(f"Repository {repo_name} already exists")
             raise Exception(f"Failed to create repository: {str(e)}")
     
-    def push_files(self, repo_name: str, files: Dict[str, str]) -> str:
-        """Push files to repository and return commit SHA."""
+    def push_files(self, repo_name: str, files: Dict[str, str], also_gh_pages: bool = False) -> str:
+        """Push files to repository and return commit SHA.
+        
+        Args:
+            repo_name: Name of the repository
+            files: Dict of filename -> content
+            also_gh_pages: If True, also push to gh-pages branch for GitHub Pages
+        
+        Returns:
+            Commit SHA of the main branch push
+        """
         temp_dir = tempfile.mkdtemp()
         
         try:
@@ -103,9 +112,20 @@ class GitHubHelper:
             repo.index.add(list(files.keys()))
             commit = repo.index.commit("Initial commit")
             
-            # Add remote and push
+            # Add remote and push to main
             origin = repo.create_remote("origin", repo_url)
             origin.push(refspec="master:main")
+            
+            # Also push to gh-pages if requested
+            if also_gh_pages:
+                print(f"Pushing to gh-pages branch for automatic GitHub Pages deployment")
+                try:
+                    # Create gh-pages branch from current state
+                    repo.git.checkout('-b', 'gh-pages')
+                    origin.push(refspec="gh-pages:gh-pages", force=True)
+                    print(f"Successfully pushed to gh-pages branch")
+                except Exception as gh_error:
+                    print(f"Warning: Failed to push gh-pages branch: {gh_error}")
             
             return commit.hexsha
         
@@ -116,17 +136,21 @@ class GitHubHelper:
             shutil.rmtree(temp_dir, ignore_errors=True)
     
     def enable_github_pages(self, repo_name: str, branch: str = "main") -> str:
-        """Enable GitHub Pages for a repository."""
+        """Enable GitHub Pages for a repository.
+        
+        Tries to enable Pages via API, but returns the expected URL regardless of success.
+        GitHub may auto-enable Pages for repos with gh-pages branch.
+        """
+        pages_url = f"https://{self.username}.github.io/{repo_name}/"
+        
         try:
             self._ensure_client()
             user = self.gh.get_user()
             repo = user.get_repo(repo_name)
-            # Use the GitHub REST API to create/update pages
-            # Try POST first (create), then PUT (update) if it already exists
-            pages_url = f"https://{self.username}.github.io/{repo_name}/"
             
+            # Try creating Pages (POST)
             try:
-                # Try creating Pages (POST)
+                print(f"Attempting to create GitHub Pages for {repo_name} via API...")
                 repo._requester.requestJson(
                     "POST",
                     f"/repos/{self.username}/{repo_name}/pages",
@@ -134,27 +158,31 @@ class GitHubHelper:
                         "source": {"branch": branch, "path": "/"}
                     }
                 )
-                print(f"GitHub Pages created for {repo_name}")
+                print(f"✓ GitHub Pages created successfully for {repo_name}")
+                return pages_url
             except GithubException as create_error:
-                if hasattr(create_error, "status") and create_error.status == 409:
-                    # Pages already exists, try updating with PUT
-                    print(f"GitHub Pages already exists for {repo_name}, updating...")
-                    repo._requester.requestJson(
-                        "PUT",
-                        f"/repos/{self.username}/{repo_name}/pages",
-                        input={
-                            "source": {"branch": branch, "path": "/"}
-                        }
-                    )
+                if hasattr(create_error, "status"):
+                    if create_error.status == 409:
+                        # Pages already exists
+                        print(f"✓ GitHub Pages already exists for {repo_name}")
+                        return pages_url
+                    elif create_error.status == 404:
+                        print(f"⚠ Pages API endpoint not available (404) - may need manual enablement or token lacks permissions")
+                    elif create_error.status == 403:
+                        print(f"⚠ Pages API forbidden (403) - token lacks required permissions (Pages/Administration)")
+                    else:
+                        print(f"⚠ Pages API error {create_error.status}: {str(create_error)}")
                 else:
-                    raise
-            
+                    print(f"⚠ Pages API error: {str(create_error)}")
+                
+                # If gh-pages branch exists, GitHub may auto-enable Pages
+                print(f"ℹ If gh-pages branch was pushed, GitHub will auto-enable Pages within a few minutes")
+                return pages_url
+                
+        except Exception as e:
+            print(f"⚠ Unexpected error enabling GitHub Pages: {str(e)}")
+            print(f"ℹ Pages URL will be: {pages_url}")
             return pages_url
-        except GithubException as e:
-            print(f"GitHub Pages API error: {e.status if hasattr(e, 'status') else 'unknown'} - {str(e)}")
-            if hasattr(e, "status") and e.status == 409:  # Pages already enabled
-                return f"https://{self.username}.github.io/{repo_name}/"
-            raise Exception(f"Failed to enable GitHub Pages: {str(e)}")
     
     def wait_for_pages(self, pages_url: str, timeout: int = 300) -> bool:
         """Wait for GitHub Pages to be available.
