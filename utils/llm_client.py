@@ -122,15 +122,20 @@ class LLMClient:
         # Build the prompt
         system_prompt = """You are an expert web developer. Generate a complete, production-ready single-page web application.
         
-Requirements:
+CRITICAL Requirements:
 - Use vanilla HTML, CSS, and JavaScript (no build tools)
-- Include all necessary CDN links for libraries
+- ALWAYS include CDN links for ANY library mentioned in the checks (e.g., marked.js, highlight.js, Bootstrap)
+- Libraries MUST be loaded via <script src="https://cdn..."> tags, NOT bundled/inlined
+- Make it fully functional with client-side JavaScript (no server required)
 - Make it responsive and professional
-- Follow best practices
-- Ensure all checks will pass
-- Add proper error handling
+- Follow best practices and ensure ALL checks will pass
+- Add proper error handling and loading states
 - Write clean, commented code
-- When attachments are provided as data URIs, embed them directly in the JavaScript code"""
+- When attachments are provided as data URIs, parse and use them in JavaScript
+- For markdown tasks: MUST use marked.js library from CDN
+- For syntax highlighting: MUST use highlight.js library from CDN
+- For GitHub API tasks: MUST make actual fetch() calls to https://api.github.com/users/{username}
+- All interactive features must be fully functional, not placeholder code"""
         
         attachments_info = ""
         if attachments:
@@ -150,13 +155,25 @@ BRIEF:
 {attachments_info}
 {checks_info}
 
-IMPORTANT: For any data files provided as data URIs above, embed them directly in your JavaScript code.
-Do NOT try to fetch external files. Parse the base64 data URI and use it inline.
+CRITICAL IMPLEMENTATION RULES:
+1. If checks mention "marked" or "markdown": MUST include <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+2. If checks mention "highlight.js": MUST include <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/highlight.min.js"></script>
+3. If checks mention "Bootstrap": MUST include Bootstrap CSS and JS from CDN
+4. If checks mention "fetch(" or API calls: MUST implement actual working fetch() requests
+5. ALL checks MUST be satisfied - review each one carefully before generating code
+6. For data URIs: Parse the base64 content and use it directly in JavaScript
 
 Example for CSV data URI:
 const dataUri = "data:text/csv;base64,....";
 const csvText = atob(dataUri.split(',')[1]);
 // then parse csvText
+
+Example for Markdown with marked.js:
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+  const markdown = "# Hello";
+  document.getElementById('output').innerHTML = marked.parse(markdown);
+</script>
 
 Generate THREE files:
 1. index.html (complete HTML file with embedded CSS and JavaScript)
