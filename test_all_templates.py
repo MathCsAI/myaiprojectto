@@ -26,7 +26,7 @@ REGISTER_TASK_URL = "https://mathcsai-llm-code-deployment.hf.space/evaluation/ap
 
 # Test email and secret
 TEST_EMAIL = "test@example.com"
-TEST_SECRET = "test123"
+TEST_SECRET = "1234567890abcdef1234567890abcdef"
 
 # Sample data for templates
 SAMPLE_CSV = "product,region,sales\nWidget,North,500\nGadget,South,750\nTool,East,600\nDevice,West,850"
